@@ -547,7 +547,9 @@ function playReferenceNote() {
     // --- HYRÄILYTUNNISTUS (PITCH DETECTION) ---
 // Taajuus -> MIDI-nuotti -> ABC-nuotti
 function freqToAbc(freq) {
-    if (!freq || freq < 50) return null;
+    if (!freq || freq < 50) {
+        return null; 
+    }
     
     // 1. Lasketaan MIDI-numero
     let midi = Math.round(12 * (Math.log(freq / 440) / Math.log(2)) + 69);
@@ -559,17 +561,20 @@ function freqToAbc(freq) {
     const noteInOctave = transposedMidi % 12;
     
     // Sallitut nuotit (C-duuri asteikko transponoinnin jälkeen)
+    // 0=C, 2=D, 4=E, 5=F, 7=G, 9=A, 11=B
     const allowedNotes = [0, 2, 4, 5, 7, 9, 11]; 
     
-    if (!allowedNotes.includes(noteInOctave)) return null;
+    if (!allowedNotes.includes(noteInOctave)) {
+        return null;
+    }
 
     const notes = ["C", "C", "D", "D", "E", "F", "F", "G", "G", "A", "A", "B"];
     const octave = Math.floor(transposedMidi / 12) - 1;
     const noteName = notes[noteInOctave];
 
-    // ABC-muotoilu (Säädetty oktaavit sopiviksi)
-    if (octave <= 3) return noteName;                 // Transponoitu matala -> C
-    if (octave === 4) return noteName.toLowerCase();  // Transponoitu keski -> c
+    // ABC-muotoilu
+    if (octave <= 3) return noteName;                 
+    if (octave === 4) return noteName.toLowerCase();  
     if (octave >= 5) return noteName.toLowerCase() + "'"; 
     
     return null;
