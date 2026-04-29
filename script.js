@@ -523,23 +523,33 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- HYRÄILYTUNNISTUS (PITCH DETECTION) ---
 // Taajuus -> MIDI-nuotti -> ABC-nuotti
 function freqToAbc(freq) {
-    if (!freq || freq < 50) return null; // Liian matala tai virheellinen
+    if (!freq || freq < 50) return null;
     
-    // MIDI-numero (69 = A4 = 440Hz)
     const midi = Math.round(12 * (Math.log(freq / 440) / Math.log(2)) + 69);
     
-    // Nuottien nimet ABC-muodossa (yksinkertaistettu C-duuriin/perusasteikolle)
-    // MIDI 60 = C4 (ABC: "C"), 72 = C5 (ABC: "c")
-    const notes = ["C", "^C", "D", "^D", "E", "F", "^F", "G", "^G", "A", "^A", "B"];
-    
+    // MIDI-arvot modulo 12: 0=C, 1=C#, 2=D, 3=D#, 4=E, 5=F, 6=F#, 7=G, 8=G#, 9=A, 10=Bb, 11=B
+    const noteInOctave = midi % 12;
+
+    // Sallitut nuotit (C-duuri: C, D, E, F, G, A, B)
+    // Nämä vastaavat modulo-arvoja: 0, 2, 4, 5, 7, 9, 11
+    const allowedNotes = [0, 2, 4, 5, 7, 9, 11];
+
+    // Jos nuotti ei ole C-duurissa, etsitään lähin sallittu nuotti
+    let finalMidi = midi;
+    if (!allowedNotes.includes(noteInOctave)) {
+        // Yksinkertaisuuden vuoksi: jos ei löydy, palautetaan null (eli ei lisätä nuottia)
+        // Tai vaihtoehtoisesti voitaisiin "pyöristää" lähimpään, mutta null on siistimpi hyräilyssä.
+        return null; 
+    }
+
+    const notes = ["C", "C", "D", "D", "E", "F", "F", "G", "G", "A", "A", "B"];
     const octave = Math.floor(midi / 12) - 1;
-    const noteName = notes[midi % 12];
-    
-    // Muunnetaan ABC-oktaavit (tämä sovittaa hyräilyn yleisimmille harpuille)
-    if (octave === 3) return noteName + ","; // C3 -> C,
-    if (octave === 4) return noteName;      // C4 -> C
-    if (octave === 5) return noteName.toLowerCase(); // C5 -> c
-    if (octave === 6) return noteName.toLowerCase() + "'"; // C6 -> c'
+    const noteName = notes[noteInOctave];
+
+    if (octave === 3) return noteName + ",";
+    if (octave === 4) return noteName;
+    if (octave === 5) return noteName.toLowerCase();
+    if (octave === 6) return noteName.toLowerCase() + "'";
     
     return null;
 }
