@@ -607,14 +607,22 @@ function autoCorrelate(buffer, sampleRate) {
     return sampleRate / T0;
 }
 
+let pitchDataBuffer = []; // Tänne kerätään kaikki havaitut taajuudet
+
 async function togglePitchDetection() {
     const btn = document.getElementById('mic-btn');
+    
     if (isPitchActive) {
         isPitchActive = false;
         if (micStream) micStream.getTracks().forEach(t => t.stop());
+        
         btn.innerText = "🎤 Hyräile nuotteja";
         btn.classList.remove('active-mic');
-        document.getElementById('mic-feedback').innerText = "Mikrofoni pois päältä";
+        document.getElementById('mic-feedback').innerText = "Analysoidaan...";
+        
+        // KUTSU ANALYYSIA TÄSSÄ
+        processCollectedData(); 
+        
         return;
     }
 
@@ -627,13 +635,13 @@ async function togglePitchDetection() {
         analyser.fftSize = 2048;
         source.connect(analyser);
 
+        pitchDataBuffer = []; // Tyhjennetään puskuri uutta äänitystä varten
         isPitchActive = true;
-        btn.innerText = "🛑 Lopeta kuuntelu";
+        btn.innerText = "🛑 Lopeta ja analysoi";
         btn.classList.add('active-mic');
         detectLoop();
     } catch (err) {
         alert("Mikrofonia ei voitu aktivoida.");
-        console.error(err);
     }
 }
 
@@ -646,22 +654,17 @@ function detectLoop() {
     const freq = autoCorrelate(buffer, audioContext.sampleRate);
     const feedbackEl = document.getElementById('mic-feedback');
 
-    if (freq === -1) {
-        isSilent = true;
-        if (feedbackEl) feedbackEl.innerText = "Kuunnellaan...";
-    } else {
-        const note = freqToAbc(freq);
-        if (note) {
-            console.log("Taajuus:", freq, "Nuotti:", note);
-            if (feedbackEl) feedbackEl.innerText = "Kuultu nuotti: " + note;
-            
-            if (note !== lastDetectedNote || isSilent) {
-                addNoteFromMic(note);
-                lastDetectedNote = note;
-            }
-            isSilent = false;
+    if (freq !== -1) {
+        // Tallennetaan taajuus ja aikaleima
+        pitchDataBuffer.push({ freq: freq, time: Date.now() });
+        
+        // Näytetään silti reaaliaikainen palaute, jotta käyttäjä tietää mikrofonin toimivan
+        const currentNote = freqToAbc(freq);
+        if (currentNote && feedbackEl) {
+            feedbackEl.innerText = "Tallennetaan: " + currentNote;
         }
     }
+    
     requestAnimationFrame(detectLoop);
 }
 
