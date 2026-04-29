@@ -18,6 +18,7 @@ let selectedAccidental = "";
 let isDottedMode = false;
 let synthControl;
 let currentAbc;
+let noteHistory = [];
 
 
 let currentWarp = 1.0;
@@ -655,21 +656,35 @@ function detectLoop() {
     requestAnimationFrame(detectLoop);
 }
 
-let noteHistory = [];
+
 
 function addNoteFromMic(note) {
-    noteHistory.push(note);
-    if (noteHistory.length < 3) return; // Vaaditaan 3 peräkkäistä samaa havaintoa
+    const abcEditor = document.getElementById('searchQuery');
+    if (!abcEditor) return;
 
-    const lastThree = noteHistory.slice(-3);
-    if (lastThree.every(n => n === note)) {
+    noteHistory.push(note);
+
+    // Pidetään historian pituus pienenä (esim. 2-3 nuottia)
+    if (noteHistory.length > 2) {
+        noteHistory.shift();
+    }
+
+    // Jos kaksi viimeisintä tunnistusta ovat sama nuotti
+    if (noteHistory.length === 2 && noteHistory[0] === noteHistory[1]) {
+        
+        // Lisätään nuotti vain, jos se on eri kuin edellinen lisätty nuotti
+        // TAI jos välissä on ollut hiljaisuus (isSilent)
         if (note !== lastDetectedNote || isSilent) {
-            const abcEditor = document.getElementById('searchQuery');
             abcEditor.value += note + " ";
+            
+            // Päivitetään esikatselu ja laukaistaan hakuun tarvittavat muutokset
             abcEditor.dispatchEvent(new Event('input'));
+            
             lastDetectedNote = note;
+            isSilent = false; 
         }
-        isSilent = false;
-        noteHistory = []; // Nollataan historia nuotin lisäämisen jälkeen
+        
+        // Tyhjennetään historia, jotta emme lisää samaa nuottia heti uudestaan
+        noteHistory = [];
     }
 }
