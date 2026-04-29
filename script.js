@@ -685,3 +685,45 @@ function addNoteFromMic(note) {
         console.log("LISÄTTY KENTTÄÄN:", note);
     }
 }
+
+function processCollectedData() {
+    if (pitchDataBuffer.length === 0) return;
+
+    const abcEditor = document.getElementById('searchQuery');
+    let finalNotes = [];
+    let currentNoteSequence = [];
+    
+    // 1. Muutetaan taajuudet nuoteiksi
+    const noteSequence = pitchDataBuffer.map(item => freqToAbc(item.freq)).filter(n => n !== null);
+
+    // 2. Ryhmitellään ja suodatetaan
+    // Vaaditaan, että sama nuotti toistuu vähintään X kertaa peräkkäin, jotta se hyväksytään
+    const MIN_REPETITIONS = 5; 
+    let lastFoundNote = "";
+    let counter = 0;
+
+    for (let i = 0; i < noteSequence.length; i++) {
+        let note = noteSequence[i];
+        
+        if (note === lastFoundNote) {
+            counter++;
+        } else {
+            if (counter >= MIN_REPETITIONS) {
+                finalNotes.push(lastFoundNote);
+            }
+            lastFoundNote = note;
+            counter = 1;
+        }
+    }
+    // Lisätään viimeinen, jos se täytti kriteerin
+    if (counter >= MIN_REPETITIONS) finalNotes.push(lastFoundNote);
+
+    // 3. Syötetään tulos tekstikenttään
+    if (finalNotes.length > 0) {
+        abcEditor.value = finalNotes.join(" ") + " ";
+        abcEditor.dispatchEvent(new Event('input'));
+        document.getElementById('mic-feedback').innerText = "Analyysi valmis!";
+    } else {
+        document.getElementById('mic-feedback').innerText = "Hyräily oli liian lyhyt tai epäselvä.";
+    }
+}
