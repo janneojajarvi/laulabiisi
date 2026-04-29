@@ -720,7 +720,7 @@ function processCollectedData() {
 
     // Hyväksytään nuotti vain jos se kestää vähintään MIN_REPETITIONS
     // JA se ei ole pelkkä lyhyt "piikki" (vähintään 40% keskiarvokestosta)
-    const MIN_REPETITIONS = 5;
+    const MIN_REPETITIONS = 12;
     let filteredNotes = rawNotesWithDurations
         .filter(item => item.duration >= MIN_REPETITIONS && item.duration > (averageDuration * 0.4))
         .map(item => item.note);
