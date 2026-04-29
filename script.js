@@ -690,39 +690,55 @@ function processCollectedData() {
     if (pitchDataBuffer.length === 0) return;
 
     const abcEditor = document.getElementById('searchQuery');
-    let finalNotes = [];
-    let currentNoteSequence = [];
+    let rawNotesWithDurations = []; // Tallennetaan nuotti ja sen kesto (osumina)
     
     // 1. Muutetaan taajuudet nuoteiksi
     const noteSequence = pitchDataBuffer.map(item => freqToAbc(item.freq)).filter(n => n !== null);
 
-    // 2. Ryhmitellään ja suodatetaan
-    // Vaaditaan, että sama nuotti toistuu vähintään X kertaa peräkkäin, jotta se hyväksytään
-    const MIN_REPETITIONS = 5; 
+    // 2. Ryhmitellään ja lasketaan kestot
     let lastFoundNote = "";
     let counter = 0;
 
     for (let i = 0; i < noteSequence.length; i++) {
         let note = noteSequence[i];
-        
         if (note === lastFoundNote) {
             counter++;
         } else {
-            if (counter >= MIN_REPETITIONS) {
-                finalNotes.push(lastFoundNote);
+            if (counter > 0) {
+                rawNotesWithDurations.push({ note: lastFoundNote, duration: counter });
             }
             lastFoundNote = note;
             counter = 1;
         }
     }
-    // Lisätään viimeinen, jos se täytti kriteerin
-    if (counter >= MIN_REPETITIONS) finalNotes.push(lastFoundNote);
+    if (counter > 0) rawNotesWithDurations.push({ note: lastFoundNote, duration: counter });
 
-    // 3. Syötetään tulos tekstikenttään
+    // 3. ÄLYKÄS SUODATUS: Poistetaan lyhyet "lipsahdukset"
+    // Lasketaan keskimääräinen nuotin kesto tässä pätkässä
+    const totalDuration = rawNotesWithDurations.reduce((sum, item) => sum + item.duration, 0);
+    const averageDuration = totalDuration / rawNotesWithDurations.length;
+
+    // Hyväksytään nuotti vain jos se kestää vähintään MIN_REPETITIONS
+    // JA se ei ole pelkkä lyhyt "piikki" (vähintään 40% keskiarvokestosta)
+    const MIN_REPETITIONS = 5;
+    let filteredNotes = rawNotesWithDurations
+        .filter(item => item.duration >= MIN_REPETITIONS && item.duration > (averageDuration * 0.4))
+        .map(item => item.note);
+
+    // 4. DUPLIKAATTIEN POISTO: Poistetaan peräkkäiset samat nuotit (esim. C E E G -> C E G)
+    let finalNotes = [];
+    for (let i = 0; i < filteredNotes.length; i++) {
+        if (i === 0 || filteredNotes[i] !== filteredNotes[i - 1]) {
+            finalNotes.push(filteredNotes[i]);
+        }
+    }
+
+    // 5. Syötetään tulos tekstikenttään
     if (finalNotes.length > 0) {
         abcEditor.value = finalNotes.join(" ") + " ";
         abcEditor.dispatchEvent(new Event('input'));
         document.getElementById('mic-feedback').innerText = "Analyysi valmis!";
+        console.log("Lopulliset nuotit:", finalNotes);
     } else {
         document.getElementById('mic-feedback').innerText = "Hyräily oli liian lyhyt tai epäselvä.";
     }
