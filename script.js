@@ -524,29 +524,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ALOITUSÄÄNEN ANTO
 function playReferenceNote() {
-    // Luodaan lyhytaikainen AudioContext ääntä varten
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 
-    // Asetetaan aaltomuoto (sine on pehmeä ja selkeä)
     osc.type = 'sine';
-    
-    // C4-nuotin taajuus on noin 261.63 Hz
-    osc.frequency.setValueAtTime(261.63, ctx.currentTime); 
+    // Vaihdettu E4-taajuus (329.63 Hz)
+    osc.frequency.setValueAtTime(329.63, ctx.currentTime); 
 
-    // Asetetaan äänenvoimakkuus ja sen häipyminen (fade-out)
     gain.gain.setValueAtTime(0.1, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 1.5);
 
     osc.connect(gain);
     gain.connect(ctx.destination);
 
-    // Soitetaan ääntä 1.5 sekuntia
     osc.start();
     osc.stop(ctx.currentTime + 1.5);
     
-    console.log("Soitettu aloitusääni: C4 (261.63 Hz)");
+    console.log("Soitettu aloitusääni: E4 (329.63 Hz)");
 }
 
     // --- HYRÄILYTUNNISTUS (PITCH DETECTION) ---
@@ -554,22 +549,31 @@ function playReferenceNote() {
 function freqToAbc(freq) {
     if (!freq || freq < 50) return null;
     
-    const midi = Math.round(12 * (Math.log(freq / 440) / Math.log(2)) + 69);
+    // 1. Lasketaan MIDI-numero
+    let midi = Math.round(12 * (Math.log(freq / 440) / Math.log(2)) + 69);
     
-    // MIDI-arvot modulo 12: 0=C, 1=C#, 2=D, 3=D#, 4=E, 5=F, 6=F#, 7=G, 8=G#, 9=A, 10=Bb, 11=B
-    const noteInOctave = midi % 12;
+    // 2. TRANSPONOINTI: Siirretään 4 puolisävelaskelta alaspäin (E -> C)
+    let transposedMidi = midi - 4;
+    
+    // 3. Valitaan nuotti transponoidun arvon perusteella
+    const noteInOctave = transposedMidi % 12;
+    
+    // Sallitut nuotit (C-duuri asteikko transponoinnin jälkeen)
+    const allowedNotes = [0, 2, 4, 5, 7, 9, 11]; 
+    
+    if (!allowedNotes.includes(noteInOctave)) return null;
 
-    // Sallitut nuotit (C-duuri: C, D, E, F, G, A, B)
-    // Nämä vastaavat modulo-arvoja: 0, 2, 4, 5, 7, 9, 11
-    const allowedNotes = [0, 2, 4, 5, 7, 9, 11];
+    const notes = ["C", "C", "D", "D", "E", "F", "F", "G", "G", "A", "A", "B"];
+    const octave = Math.floor(transposedMidi / 12) - 1;
+    const noteName = notes[noteInOctave];
 
-    // Jos nuotti ei ole C-duurissa, etsitään lähin sallittu nuotti
-    let finalMidi = midi;
-    if (!allowedNotes.includes(noteInOctave)) {
-        // Yksinkertaisuuden vuoksi: jos ei löydy, palautetaan null (eli ei lisätä nuottia)
-        // Tai vaihtoehtoisesti voitaisiin "pyöristää" lähimpään, mutta null on siistimpi hyräilyssä.
-        return null; 
-    }
+    // ABC-muotoilu (Säädetty oktaavit sopiviksi)
+    if (octave <= 3) return noteName;                 // Transponoitu matala -> C
+    if (octave === 4) return noteName.toLowerCase();  // Transponoitu keski -> c
+    if (octave >= 5) return noteName.toLowerCase() + "'"; 
+    
+    return null;
+}
 
     const notes = ["C", "C", "D", "D", "E", "F", "F", "G", "G", "A", "A", "B"];
     const octave = Math.floor(midi / 12) - 1;
