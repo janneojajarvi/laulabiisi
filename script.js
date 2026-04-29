@@ -504,4 +504,72 @@ document.addEventListener('DOMContentLoaded', () => {
             ABCJS.renderAbc("search-preview", ""); 
         });
     }
+    
+    // --- HYRÄILYTUNNISTUS (PITCH DETECTION) ---
+
+let audioContext;
+let analyser;
+let micStream;
+let isPitchActive = false;
+let lastDetectedNote = null;
+let isSilent = true;
+
+// Taajuus -> MIDI-nuotti -> ABC-nuotti
+function freqToAbc(freq) {
+    if (!freq || freq < 50) return null; // Liian matala tai virheellinen
+    
+    // MIDI-numero (69 = A4 = 440Hz)
+    const midi = Math.round(12 * (Math.log(freq / 440) / Math.log(2)) + 69);
+    
+    // Nuottien nimet ABC-muodossa (yksinkertaistettu C-duuriin/perusasteikolle)
+    // MIDI 60 = C4 (ABC: "C"), 72 = C5 (ABC: "c")
+    const notes = ["C", "^C", "D", "^D", "E", "F", "^F", "G", "^G", "A", "^A", "B"];
+    
+    const octave = Math.floor(midi / 12) - 1;
+    const noteName = notes[midi % 12];
+    
+    // Muunnetaan ABC-oktaavit (tämä sovittaa hyräilyn yleisimmille harpuille)
+    if (octave === 3) return noteName + ","; // C3 -> C,
+    if (octave === 4) return noteName;      // C4 -> C
+    if (octave === 5) return noteName.toLowerCase(); // C5 -> c
+    if (octave === 6) return noteName.toLowerCase() + "'"; // C6 -> c'
+    
+    return null;
+}
+
+// Autokorrelaatio-algoritmi taajuuden etsimiseen ääniaallosta
+function autoCorrelate(buffer, sampleRate) {
+    let SIZE = buffer.length;
+    let rms = 0;
+    for (let i = 0; i < SIZE; i++) rms += buffer[i] * buffer[i];
+    rms = Math.sqrt(rms / SIZE);
+    if (rms < 0.01) return -1; // Liian hiljainen
+
+    let r1 = 0, r2 = SIZE - 1, thres = 0.2;
+    for (let i = 0; i < SIZE / 2; i++) {
+        if (Math.abs(buffer[i]) < thres) { r1 = i; break; }
+    }
+    for (let i = 1; i < SIZE / 2; i++) {
+        if (Math.abs(buffer[SIZE - i]) < thres) { r2 = SIZE - i; break; }
+    }
+
+    let buf = buffer.slice(r1, r2);
+    SIZE = buf.length;
+
+    let c = new Float32Array(SIZE).fill(0);
+    for (let i = 0; i < SIZE; i++) {
+        for (let j = 0; j < SIZE - i; j++) {
+            c[i] = c[i] + buf[j] * buf[j + i];
+        }
+    }
+
+    let d = 0; while (c[d] > c[d + 1]) d++;
+    let maxval = -1, maxpos = -1;
+    for (let i = d; i < SIZE; i++) {
+        if (c[i] > maxval) { maxval = c[i]; maxpos = i; }
+    }
+    let T0 = maxpos;
+    return sampleRate / T0;
+}
+    
 }); // Tämä sulkee DOMContentLoaded-funktion oikein
