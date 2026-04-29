@@ -529,7 +529,7 @@ function playReferenceNote() {
     const gain = ctx.createGain();
 
     osc.type = 'sine';
-    // Vaihdettu E4-taajuus (329.63 Hz)
+    // E4-taajuus (329.63 Hz)
     osc.frequency.setValueAtTime(329.63, ctx.currentTime); 
 
     gain.gain.setValueAtTime(0.1, ctx.currentTime);
@@ -544,12 +544,9 @@ function playReferenceNote() {
     console.log("Soitettu aloitusääni: E4 (329.63 Hz)");
 }
 
-    // --- HYRÄILYTUNNISTUS (PITCH DETECTION) ---
-// Taajuus -> MIDI-nuotti -> ABC-nuotti
+// Taajuus -> MIDI-nuotti -> ABC-nuotti (Transponointi E -> C)
 function freqToAbc(freq) {
-    if (!freq || freq < 50) {
-        return null; 
-    }
+    if (!freq || freq < 50) return null;
     
     // 1. Lasketaan MIDI-numero
     let midi = Math.round(12 * (Math.log(freq / 440) / Math.log(2)) + 69);
@@ -559,35 +556,18 @@ function freqToAbc(freq) {
     
     // 3. Valitaan nuotti transponoidun arvon perusteella
     const noteInOctave = transposedMidi % 12;
+    const allowedNotes = [0, 2, 4, 5, 7, 9, 11]; // C, D, E, F, G, A, B
     
-    // Sallitut nuotit (C-duuri asteikko transponoinnin jälkeen)
-    // 0=C, 2=D, 4=E, 5=F, 7=G, 9=A, 11=B
-    const allowedNotes = [0, 2, 4, 5, 7, 9, 11]; 
-    
-    if (!allowedNotes.includes(noteInOctave)) {
-        return null;
-    }
+    if (!allowedNotes.includes(noteInOctave)) return null;
 
     const notes = ["C", "C", "D", "D", "E", "F", "F", "G", "G", "A", "A", "B"];
     const octave = Math.floor(transposedMidi / 12) - 1;
     const noteName = notes[noteInOctave];
 
-    // ABC-muotoilu
+    // ABC-muotoilu (Säädetty oktaavit)
     if (octave <= 3) return noteName;                 
     if (octave === 4) return noteName.toLowerCase();  
     if (octave >= 5) return noteName.toLowerCase() + "'"; 
-    
-    return null;
-}
-
-    const notes = ["C", "C", "D", "D", "E", "F", "F", "G", "G", "A", "A", "B"];
-    const octave = Math.floor(midi / 12) - 1;
-    const noteName = notes[noteInOctave];
-
-    if (octave === 3) return noteName + ",";
-    if (octave === 4) return noteName;
-    if (octave === 5) return noteName.toLowerCase();
-    if (octave === 6) return noteName.toLowerCase() + "'";
     
     return null;
 }
@@ -598,7 +578,7 @@ function autoCorrelate(buffer, sampleRate) {
     let rms = 0;
     for (let i = 0; i < SIZE; i++) rms += buffer[i] * buffer[i];
     rms = Math.sqrt(rms / SIZE);
-    if (rms < 0.01) return -1; // Liian hiljainen
+    if (rms < 0.01) return -1;
 
     let r1 = 0, r2 = SIZE - 1, thres = 0.2;
     for (let i = 0; i < SIZE / 2; i++) {
@@ -627,16 +607,11 @@ function autoCorrelate(buffer, sampleRate) {
     return sampleRate / T0;
 }
 
-// --- HYRÄILYLOGIIKKA (Lisää nämä script.js loppuun) ---
-
 async function togglePitchDetection() {
     const btn = document.getElementById('mic-btn');
-    
     if (isPitchActive) {
         isPitchActive = false;
-        if (micStream) {
-            micStream.getTracks().forEach(t => t.stop());
-        }
+        if (micStream) micStream.getTracks().forEach(t => t.stop());
         btn.innerText = "🎤 Hyräile nuotteja";
         btn.classList.remove('active-mic');
         document.getElementById('mic-feedback').innerText = "Mikrofoni pois päältä";
@@ -655,9 +630,9 @@ async function togglePitchDetection() {
         isPitchActive = true;
         btn.innerText = "🛑 Lopeta kuuntelu";
         btn.classList.add('active-mic');
-        detectLoop(); // Käynnistetään tunnistussilmukka
+        detectLoop();
     } catch (err) {
-        alert("Mikrofonia ei voitu aktivoida. Tarkista oikeudet.");
+        alert("Mikrofonia ei voitu aktivoida.");
         console.error(err);
     }
 }
@@ -672,7 +647,6 @@ function detectLoop() {
     const feedbackEl = document.getElementById('mic-feedback');
 
     if (freq === -1) {
-        // Hiljaisuus havaittu
         isSilent = true;
         if (feedbackEl) feedbackEl.innerText = "Kuunnellaan...";
     } else {
@@ -681,7 +655,6 @@ function detectLoop() {
             console.log("Taajuus:", freq, "Nuotti:", note);
             if (feedbackEl) feedbackEl.innerText = "Kuultu nuotti: " + note;
             
-            // Lisätään nuotti jos: vaihtui TAI tuli hiljaisuuden jälkeen
             if (note !== lastDetectedNote || isSilent) {
                 addNoteFromMic(note);
                 lastDetectedNote = note;
@@ -689,36 +662,23 @@ function detectLoop() {
             isSilent = false;
         }
     }
-    // Jatkaa silmukkaa seuraavaan animaatioruutuun
     requestAnimationFrame(detectLoop);
 }
 
-
-
-let lastAddedTime = 0; // Estetään nuottitulva aikaleimalla
-
+let lastAddedTime = 0; 
 function addNoteFromMic(note) {
     const abcEditor = document.getElementById('searchQuery');
     if (!abcEditor) return;
 
     const nyt = Date.now();
-    
-    // SÄÄTÖ: 500ms (puoli sekuntia) tauko nuottien välillä
-    // Tämä estää sen, että G G G G G G ei täytä koko kenttää
     if (nyt - lastAddedTime < 500) return; 
 
-    // Lisätään nuotti vain jos se on eri kuin edellinen 
-    // TAI jos on pidetty pieni tauko hyräilyssä
     if (note !== lastDetectedNote || isSilent) {
         abcEditor.value += note + " ";
-        
-        // Päivitetään esikatselu
         abcEditor.dispatchEvent(new Event('input'));
-        
         lastDetectedNote = note;
         lastAddedTime = nyt;
         isSilent = false;
-        
         console.log("LISÄTTY KENTTÄÄN:", note);
     }
 }
