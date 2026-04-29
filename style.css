@@ -358,3 +358,22 @@ code { background: #fff; padding: 2px 4px; border-radius: 3px; font-weight: bold
     min-height: auto;
     background: transparent;
 }
+
+#mic-btn.active-mic {
+    background-color: #ff5252;
+    color: white;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+#mic-feedback {
+    margin-left: 10px;
+    font-size: 0.9em;
+    font-style: italic;
+    color: #666;
+}
