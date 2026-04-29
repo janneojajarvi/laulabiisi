@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Melodia-etsivä</title>
+    <title>Melodia-etsivä 2</title>
     <link rel="icon" href="./favicon.ico" type="image/x-icon">
     
     <link rel="manifest" href="manifest.json">
@@ -17,7 +17,7 @@
 
 <div class="app-container">
   <header>
-    <h1>🔍 Melodia-etsivä</h1>
+    <h1>🔍 Melodia-etsivä 2</h1>
     
     <div id="loader-container" style="margin: 20px 0; display: block;">
       <div id="loader-text">Ladataan nuottikirjastoa...</div>
@@ -71,7 +71,10 @@
     
     <p>Kirjoita pätkä melodiaa ABC-muodossa tai käytä nappeja. Työkalu etsii vastaavuudet kaikissa sävellajeissa.</p>
   </header>
-
+<div class="mic-controls">
+    <button id="mic-btn" onclick="togglePitchDetection()">🎤 Hyräile nuotteja</button>
+    <span id="mic-feedback">Mikrofoni pois päältä</span>
+</div>
   <div class="search-section">
     <div style="position: relative;">
         <textarea id="searchQuery" 
