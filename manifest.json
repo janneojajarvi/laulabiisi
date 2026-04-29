@@ -1,13 +1,13 @@
 {
-  "name": "Arvaabiisi",
-  "short_name": "Arvaabiisi",
-  "id": "/arvaabiisi/",
-  "start_url": "/arvaabiisi/index.html",
-  "scope": "/arvaabiisi/",
+  "name": "Laulabiisi",
+  "short_name": "Laulabiisi",
+  "id": "/laulabiisi/",
+  "start_url": "/laulabiisi/index.html",
+  "scope": "/laulabiisi/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#2196F3",
-  "description": "Melodianetsintätyökalu nuottikirjastoista.",
+  "description": "Melodianetsintätyökalu johon voi laulaa.",
   "icons": [
     {
       "src": "kuva.png",
