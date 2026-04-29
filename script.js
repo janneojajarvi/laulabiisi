@@ -655,13 +655,21 @@ function detectLoop() {
     requestAnimationFrame(detectLoop);
 }
 
+let noteHistory = [];
+
 function addNoteFromMic(note) {
-    const abcEditor = document.getElementById('searchQuery');
-    if (!abcEditor) return;
-    
-    // Lisätään nuotti ja välilyönti
-    abcEditor.value += note + " ";
-    
-    // Tärkeää: Laukaistaan 'input' tapahtuma, jotta esikatselu päivittyy
-    abcEditor.dispatchEvent(new Event('input'));
+    noteHistory.push(note);
+    if (noteHistory.length < 3) return; // Vaaditaan 3 peräkkäistä samaa havaintoa
+
+    const lastThree = noteHistory.slice(-3);
+    if (lastThree.every(n => n === note)) {
+        if (note !== lastDetectedNote || isSilent) {
+            const abcEditor = document.getElementById('searchQuery');
+            abcEditor.value += note + " ";
+            abcEditor.dispatchEvent(new Event('input'));
+            lastDetectedNote = note;
+        }
+        isSilent = false;
+        noteHistory = []; // Nollataan historia nuotin lisäämisen jälkeen
+    }
 }
