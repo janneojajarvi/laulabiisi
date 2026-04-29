@@ -658,33 +658,30 @@ function detectLoop() {
 
 
 
+let lastAddedTime = 0; // Estetään nuottitulva aikaleimalla
+
 function addNoteFromMic(note) {
     const abcEditor = document.getElementById('searchQuery');
     if (!abcEditor) return;
 
-    noteHistory.push(note);
+    const nyt = Date.now();
+    
+    // SÄÄTÖ: 500ms (puoli sekuntia) tauko nuottien välillä
+    // Tämä estää sen, että G G G G G G ei täytä koko kenttää
+    if (nyt - lastAddedTime < 500) return; 
 
-    // Pidetään historian pituus pienenä (esim. 2-3 nuottia)
-    if (noteHistory.length > 2) {
-        noteHistory.shift();
-    }
-
-    // Jos kaksi viimeisintä tunnistusta ovat sama nuotti
-    if (noteHistory.length === 2 && noteHistory[0] === noteHistory[1]) {
+    // Lisätään nuotti vain jos se on eri kuin edellinen 
+    // TAI jos on pidetty pieni tauko hyräilyssä
+    if (note !== lastDetectedNote || isSilent) {
+        abcEditor.value += note + " ";
         
-        // Lisätään nuotti vain, jos se on eri kuin edellinen lisätty nuotti
-        // TAI jos välissä on ollut hiljaisuus (isSilent)
-        if (note !== lastDetectedNote || isSilent) {
-            abcEditor.value += note + " ";
-            
-            // Päivitetään esikatselu ja laukaistaan hakuun tarvittavat muutokset
-            abcEditor.dispatchEvent(new Event('input'));
-            
-            lastDetectedNote = note;
-            isSilent = false; 
-        }
+        // Päivitetään esikatselu
+        abcEditor.dispatchEvent(new Event('input'));
         
-        // Tyhjennetään historia, jotta emme lisää samaa nuottia heti uudestaan
-        noteHistory = [];
+        lastDetectedNote = note;
+        lastAddedTime = nyt;
+        isSilent = false;
+        
+        console.log("LISÄTTY KENTTÄÄN:", note);
     }
 }
