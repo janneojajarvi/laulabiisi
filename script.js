@@ -367,7 +367,14 @@ function handleSearch() {
 
 // --- TAPAHTUMAT ---
 
+let audioContext;
+let analyser;
+let micStream;
+let isPitchActive = false;
+let lastDetectedNote = null;
+let isSilent = true;
 let visualObj; // Globaali muuttuja temposäädintä varten
+
 
 document.addEventListener('DOMContentLoaded', () => {
     initApp();
@@ -505,15 +512,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
+
+
+
+
+    
+    
+}); // Tämä sulkee DOMContentLoaded-funktion oikein
+
     // --- HYRÄILYTUNNISTUS (PITCH DETECTION) ---
-
-let audioContext;
-let analyser;
-let micStream;
-let isPitchActive = false;
-let lastDetectedNote = null;
-let isSilent = true;
-
 // Taajuus -> MIDI-nuotti -> ABC-nuotti
 function freqToAbc(freq) {
     if (!freq || freq < 50) return null; // Liian matala tai virheellinen
@@ -571,9 +578,6 @@ function autoCorrelate(buffer, sampleRate) {
     let T0 = maxpos;
     return sampleRate / T0;
 }
-    
-    
-}); // Tämä sulkee DOMContentLoaded-funktion oikein
 
 // --- HYRÄILYLOGIIKKA (Lisää nämä script.js loppuun) ---
 
