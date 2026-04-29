@@ -572,4 +572,82 @@ function autoCorrelate(buffer, sampleRate) {
     return sampleRate / T0;
 }
     
+    
 }); // Tämä sulkee DOMContentLoaded-funktion oikein
+
+// --- HYRÄILYLOGIIKKA (Lisää nämä script.js loppuun) ---
+
+async function togglePitchDetection() {
+    const btn = document.getElementById('mic-btn');
+    
+    if (isPitchActive) {
+        isPitchActive = false;
+        if (micStream) {
+            micStream.getTracks().forEach(t => t.stop());
+        }
+        btn.innerText = "🎤 Hyräile nuotteja";
+        btn.classList.remove('active-mic');
+        document.getElementById('mic-feedback').innerText = "Mikrofoni pois päältä";
+        return;
+    }
+
+    try {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        micStream = stream;
+        const source = audioContext.createMediaStreamSource(stream);
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 2048;
+        source.connect(analyser);
+
+        isPitchActive = true;
+        btn.innerText = "🛑 Lopeta kuuntelu";
+        btn.classList.add('active-mic');
+        detectLoop(); // Käynnistetään tunnistussilmukka
+    } catch (err) {
+        alert("Mikrofonia ei voitu aktivoida. Tarkista oikeudet.");
+        console.error(err);
+    }
+}
+
+function detectLoop() {
+    if (!isPitchActive) return;
+
+    const buffer = new Float32Array(analyser.fftSize);
+    analyser.getFloatTimeDomainData(buffer);
+    
+    const freq = autoCorrelate(buffer, audioContext.sampleRate);
+    const feedbackEl = document.getElementById('mic-feedback');
+
+    if (freq === -1) {
+        // Hiljaisuus havaittu
+        isSilent = true;
+        if (feedbackEl) feedbackEl.innerText = "Kuunnellaan...";
+    } else {
+        const note = freqToAbc(freq);
+        if (note) {
+            console.log("Taajuus:", freq, "Nuotti:", note);
+            if (feedbackEl) feedbackEl.innerText = "Kuultu nuotti: " + note;
+            
+            // Lisätään nuotti jos: vaihtui TAI tuli hiljaisuuden jälkeen
+            if (note !== lastDetectedNote || isSilent) {
+                addNoteFromMic(note);
+                lastDetectedNote = note;
+            }
+            isSilent = false;
+        }
+    }
+    // Jatkaa silmukkaa seuraavaan animaatioruutuun
+    requestAnimationFrame(detectLoop);
+}
+
+function addNoteFromMic(note) {
+    const abcEditor = document.getElementById('searchQuery');
+    if (!abcEditor) return;
+    
+    // Lisätään nuotti ja välilyönti
+    abcEditor.value += note + " ";
+    
+    // Tärkeää: Laukaistaan 'input' tapahtuma, jotta esikatselu päivittyy
+    abcEditor.dispatchEvent(new Event('input'));
+}
