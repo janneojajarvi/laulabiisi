@@ -521,6 +521,34 @@ document.addEventListener('DOMContentLoaded', () => {
     
 }); // Tämä sulkee DOMContentLoaded-funktion oikein
 
+
+// ALOITUSÄÄNEN ANTO
+function playReferenceNote() {
+    // Luodaan lyhytaikainen AudioContext ääntä varten
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    // Asetetaan aaltomuoto (sine on pehmeä ja selkeä)
+    osc.type = 'sine';
+    
+    // C4-nuotin taajuus on noin 261.63 Hz
+    osc.frequency.setValueAtTime(261.63, ctx.currentTime); 
+
+    // Asetetaan äänenvoimakkuus ja sen häipyminen (fade-out)
+    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 1.5);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    // Soitetaan ääntä 1.5 sekuntia
+    osc.start();
+    osc.stop(ctx.currentTime + 1.5);
+    
+    console.log("Soitettu aloitusääni: C4 (261.63 Hz)");
+}
+
     // --- HYRÄILYTUNNISTUS (PITCH DETECTION) ---
 // Taajuus -> MIDI-nuotti -> ABC-nuotti
 function freqToAbc(freq) {
